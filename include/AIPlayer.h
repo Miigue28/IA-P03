@@ -53,6 +53,20 @@ class AIPlayer: public Player{
          */
         virtual void think(color & c_piece,  int & id_piece, int & dice) const;
 
+        virtual void thinkAleatorio(color & c_piece,  int & id_piece, int & dice) const;
+
+        virtual void thinkAleatorioMasInteligente(color & c_piece,  int & id_piece, int & dice) const;
+        
+        virtual void thinkFichaMasAdelantada(color & c_piece,  int & id_piece, int & dice) const; 
+
+        virtual void thinkMejorOpcion(color & c_piece,  int & id_piece, int & dice) const;
+
+        virtual double alphaBetaPrunning(const Parchis & state, int player, int depth, const int max_depth, color & c_piece, int & id_piece, int & dice, double alpha, double beta, double (*heuristic)(const Parchis &, int)) const;
+
+        virtual double maxValue(const Parchis & state, int player, int depth, const int max_depth, color & c_piece, int & id_piece, int & dice, double alpha, double beta, double (*heuristic)(const Parchis &, int)) const;
+
+        virtual double minValue(const Parchis & state, int player, int depth, const int max_depth, color & c_piece, int & id_piece, int & dice, double alpha, double beta, double (*heuristic)(const Parchis &, int)) const; 
+
         /**
          * @brief Método que determina si el player es inteligente (decide el mejor movimiento)
          * o no. True para AIPlayer.
