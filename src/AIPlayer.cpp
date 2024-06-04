@@ -38,6 +38,9 @@ void AIPlayer::think(color & c_piece, int & id_piece, int & dice) const{
         case 0:
             valor = alphaBetaPrunning(*actual, jugador, 0, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, ValoracionTest);
         break;
+        case 1:
+            valor = alphaBetaPrunning(*actual, jugador, 0, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, Heuristica);
+        break;
     }
     cout << "Valor MiniMax: " << valor << "  Accion: " << str(c_piece) << " " << id_piece << " " << dice << endl;
 }
@@ -121,59 +124,6 @@ double AIPlayer::minValue(const Parchis & state, int player, int depth, const in
 double AIPlayer::alphaBetaPrunning(const Parchis & state, int player, int depth, const int max_depth, color & c_piece, int & id_piece, int & dice, double alpha, double beta, double (*heuristic) (const Parchis &, int)) const
 {
     return maxValue(state, player, depth, max_depth, c_piece, id_piece, dice, alpha, beta, heuristic);
-    //double valor;
-//
-    //if(depth == max_depth or state.gameOver()){
-    //    return heuristic(state, jugador);
-    //}
-    //
-    //if (jugador == state.getCurrentPlayerId())
-    //{
-    //    ParchisBros hijos = state.getChildren();
-    //    
-    //    for(ParchisBros::Iterator it = hijos.begin(); it != hijos.end() and alpha < beta; ++it)
-    //    {
-    //        double auxiliar = alphaBetaPrunning(*it, jugador, depth+1, max_depth, c_piece, id_piece, dice, alpha, beta, heuristic);
-    //        if(auxiliar > alpha)
-    //        {
-    //            alpha = auxiliar;
-//
-    //            if(depth == 0)
-    //            {
-    //                c_piece = it.getMovedColor();
-    //                id_piece = it.getMovedPieceId();
-    //                dice = it.getMovedDiceValue();
-    //            }
-//
-    //            if(beta <= alpha)
-    //            {
-    //                return beta;
-    //            }
-    //        }
-    //    }
-//
-    //    return alpha;
-//
-    //} 
-    //else 
-    //{
-    //    ParchisBros hijos = state.getChildren();
-//
-    //    for(ParchisBros::Iterator it = hijos.begin(); it != hijos.end() and alpha < beta; ++it)
-    //    {
-    //        double auxiliar = alphaBetaPrunning(*it, jugador, depth+1, max_depth, c_piece, id_piece, dice, alpha, beta, heuristic);
-    //        if(auxiliar < beta)
-    //        {
-    //            beta = auxiliar;
-//
-    //            if(beta <= alpha)
-    //            {
-    //                return alpha;
-    //            }
-    //        }
-    //    }
-    //    return beta;
-    //}
 }
 
 void AIPlayer::thinkAleatorio(color & c_piece,  int & id_piece, int & dice) const
@@ -427,6 +377,222 @@ double AIPlayer::ValoracionTest(const Parchis &estado, int jugador)
 
         // Devuelvo la puntuación de mi jugador menos la puntuación del oponente.
         return puntuacion_jugador - puntuacion_oponente;
+    }
+}
+
+pair<color, int> AIPlayer::getClosestPieceToGoal(const Parchis & state, color player)
+{
+    // Calculamos la ficha más cercana a la meta de distinto color
+    pair<color, int> closest;
+    int min = 100, distance;
+    for (color c : state.game_colors)
+    {
+        for (int j = 0; j < num_pieces; j++)
+        {
+            distance = state.distanceToGoal(c, j);
+            if (0 < distance && distance < min && c != player)
+            {
+                min = distance;
+                closest.first = c;
+                closest.second = j;
+            }
+        }
+    }
+    return closest;
+}
+
+pair<color, int> AIPlayer::getClosestPieceToPlayer(const Parchis & state, color player, int id_piece)
+{
+    // Calculamos la ficha más cercana al jugador de distinto color
+    pair<color, int> closest;
+    int min = 100, distance;
+    for (color c : state.game_colors)
+    {
+        for (int j = 0; j < num_pieces; j++)
+        {
+            distance = state.distanceBoxtoBox(c, j, player, id_piece);
+            if (0 < distance && distance < min && c != player && j != id_piece)
+            {
+                min = distance;
+                closest.first = c;
+                closest.second = j;
+            }
+        }
+    }
+    return closest;
+}
+
+double AIPlayer::setPowerBarScore(const Parchis & state, int player)
+{
+    vector<color> colors = state.getPlayerColors(player);
+    bool have_dices = (state.getAvailableNormalDices(player).size() > 0);
+    bool closest_enemy_goal = true;
+    bool closest_enemy = true;
+
+    // Determinamos si la pieza más cercana a la meta es de un color aliado
+    for (int i = 0; i < colors.size(); i++)
+    {
+        pair<color, int> closest_to_goal = getClosestPieceToGoal(state, colors[i]);
+        if (closest_to_goal.first == colors[(i+1) % colors.size()])
+        {
+            closest_enemy_goal = false;
+        }
+    }
+    
+    // Determinamos si la pieza más cercana es aliada
+    for (int i = 0; i < colors.size(); i++)
+    {
+        for (int j = 0; j < num_pieces; j++)
+        {
+            if (state.distanceToGoal(colors[i], j) > 0)
+            {
+                pair<color, int> closest = getClosestPieceToPlayer(state, colors[i], j);
+                if (closest.first == colors[(i+1) % colors.size()])
+                {
+                    closest_enemy = false;
+                }
+            }
+        }
+    }
+
+    int power = state.getPower(player);
+    // MOVIMIENTO RÁPIDO
+    if (0 <= power && power < 50) return 100;
+    // CONCHA ROJA
+    else if (50 <= power && power < 60) return closest_enemy ? 25 : -10;
+    // BOOM
+    else if (60 <= power && power < 65) return have_dices ? 10 : -25;
+    // MOVIMIENTO ULTRARÁPIDO
+    else if (65 <= power && power < 70) return 200;
+    // CONCHA ROJA
+    else if (70 <= power && power < 75) return closest_enemy ? 25 : -10;
+    // MOVIMIENTO BALA
+    else if (75 <= power && power < 80) return 300;
+    // CATAPUM
+    else if (80 <= power && power < 85) return have_dices ? 20 : -50;
+    // CONCHA AZUL
+    else if (85 <= power && power < 90) return closest_enemy_goal ? 50 : -25;
+    // BOOMBOOM
+    else if (90 <= power && power < 95) return have_dices ? 30 : -100;
+    // MOVIMIENTO ESTRELLA
+    else if (95 <= power && power < 100) return 400;
+    // CATAPUMCHIMPUM
+    else return -200;
+}
+
+double AIPlayer::setScore(const Parchis & state, int player)
+{
+    // Colores que juega el jugador
+    vector<color> colors = state.getPlayerColors(player);
+
+    int score = 0;
+    
+    // Recorro colores del jugador.
+    for (int i = 0; i < colors.size(); i++)
+    {
+        color c = colors[i];
+        // Recorro las fichas de ese color.
+        for (int j = 0; j < num_pieces; j++)
+        {
+            // Valoramos positivamente que la ficha esté en casilla segura o casi meta.
+            if (state.isSafePiece(c, j))
+            {
+                score += 10;
+            }
+            else if (state.getBoard().getPiece(c, j).get_box().type == final_queue)
+            {
+                score += 50;
+            }
+            // Valoramos positivamente que la ficha esté cerca de la meta
+            score += 100 - state.distanceToGoal(c, j);
+        }
+
+        // Valoramos positivamente que tengamos fichas en meta
+        score += state.piecesAtGoal(c)*50;
+
+        // Valoramos negativamente que tengamos fichas en casa
+        score -= state.piecesAtHome(c)*25;
+
+        // Valoramos negativamente que rebote mucho en la meta
+        int bounces = state.getBounces(c);
+        if (5 <= bounces && bounces < 10)
+        {
+            score -= 15;
+        }
+        else if (10 <= bounces && bounces < 20)
+        {
+            score -= 25;
+        }
+        else if (20 <= bounces && bounces < 30)
+        {
+            score -= 50;
+        }
+    }
+
+    // Bonificaciones si hemos realizado la última acción
+    tuple<color, int, int> last_action = state.getLastAction();
+    if (get<0>(last_action) == colors[0] || get<0>(last_action) == colors[1])
+    {
+        pair<color, int> eaten = state.eatenPiece();
+        if (eaten.first == none)
+        {
+            score += 0;
+        }
+        // Valoramos muy positivamente si la ficha comida en el último turno no fue suya
+        else if (eaten.first != colors[0] && eaten.first != colors[1])
+        {
+            score += 100;
+        }
+        // Valoramos negativamente si ha comido una ficha suya
+        else if (eaten.first == colors[0] || eaten.first == colors[1])
+        {
+            score -= 25;
+        }
+
+        int dice = state.getLastDice();
+    }
+
+    score += setPowerBarScore(state, player);
+
+    // Bonificaciones si se han destruido fichas rivales en el último turno
+    vector<pair<color, int>> destroyed = state.piecesDestroyedLastMove();
+    for (auto d : destroyed)
+    {
+        if (d.first == colors[0] || d.first == colors[1])
+        {
+            score -= 50;
+        }
+        else
+        {
+            score += 50;
+        }
+    }
+
+    return (double) score;
+}
+
+double AIPlayer::Heuristica(const Parchis & state, int player)
+{
+    // Heurística de prueba proporcionada para validar el funcionamiento del algoritmo de búsqueda.
+    int winner = state.getWinner();
+    int adversary = (player+1) % 2;
+
+    // Si hay un ganador, devuelvo más/menos infinito, según si he ganado yo o el oponente.
+    if (winner == player)
+    {
+        return gana;
+    }
+    else if (winner == adversary)
+    {
+        return pierde;
+    }
+    else
+    {
+        double player_score = setScore(state, player);
+        double adversary_score = setScore(state, adversary);
+
+        // Devuelvo la puntuación de mi jugador menos la puntuación del oponente.
+        return player_score - adversary_score;
     }
 }
 

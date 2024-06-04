@@ -1,13 +1,13 @@
 #ifndef __ATTRIBUTES_H__
 #define __ATTRIBUTES_H__
 
-# include <vector>
-# include <map>
-# include <string>
+#include <vector>
+#include <map>
+#include <string>
 
 using namespace std;
 
-//Enumerado con los diferentes colores: Azul, rojo, verde, amarillo y ninguno.
+// Enumerado con los diferentes colores: Azul, rojo, verde, amarillo y ninguno.
 enum color {blue, red, green, yellow, none};
 
 /**
@@ -58,20 +58,20 @@ inline color opponent_color(color c){
     }
 }
 
-//Enumerado con los diferentes tipos de casillas
+// Enumerado con los diferentes tipos de casillas
 enum box_type {normal, home, final_queue, goal};
 
-//Struct para definir las casillas: número de casilla, tipo y color.
+// Struct para definir las casillas: número de casilla, tipo y color.
 struct Box
 {
-    //Número de casilla:
-    //{1, 2, ..., 68} para casillas normales (normal)
-    //{1, 2, ..., 7} para casillas del pasillo a la meta (final_queue)
-    //0 en caso contrario
+    // Número de casilla:
+    // {1, 2, ..., 68} para casillas normales (normal)
+    // {1, 2, ..., 7} para casillas del pasillo a la meta (final_queue)
+    // 0 en caso contrario
     int num;
-    //Tipo de la casilla
+    // Tipo de la casilla
     box_type type;
-    //Color de la casilla
+    // Color de la casilla
     color col;
 
     /**
@@ -123,7 +123,7 @@ inline bool operator ==(const Box & a, const Box & b){
 
 
 
-//Enumerado de los diferentes tipos de objetos speciales que aparecen en el tablero.
+// Enumerado de los diferentes tipos de objetos speciales que aparecen en el tablero.
 enum item_type {power = 100,
                 star = 101,
                 boo = 102,
@@ -147,9 +147,9 @@ enum item_type {power = 100,
  */
 struct SpecialItem
 {
-    //Tipo de objeto especial
+    // Tipo de objeto especial
     item_type type;
-    //Casilla en la que se encuentra el objeto especial
+    // Casilla en la que se encuentra el objeto especial
     Box box;
 };
 
