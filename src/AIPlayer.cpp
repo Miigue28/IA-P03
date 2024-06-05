@@ -425,59 +425,61 @@ pair<color, int> AIPlayer::getClosestPieceToPlayer(const Parchis & state, color 
 double AIPlayer::setPowerBarScore(const Parchis & state, int player)
 {
     vector<color> colors = state.getPlayerColors(player);
-    bool have_dices = (state.getAvailableNormalDices(player).size() > 0);
-    bool closest_enemy_goal = true;
-    bool closest_enemy = true;
-
-    // Determinamos si la pieza más cercana a la meta es de un color aliado
-    for (int i = 0; i < colors.size(); i++)
-    {
-        pair<color, int> closest_to_goal = getClosestPieceToGoal(state, colors[i]);
-        if (closest_to_goal.first == colors[(i+1) % colors.size()])
-        {
-            closest_enemy_goal = false;
-        }
-    }
+    bool have_other_available_dices = (state.getAvailableNormalDices(player).size() > 0);
     
-    // Determinamos si la pieza más cercana es aliada
-    for (int i = 0; i < colors.size(); i++)
+    int power = state.getPower(player);
+    // MOVIMIENTO RÁPIDO
+    if (0 <= power && power < 50) return (power/7)*10;
+    // CONCHA ROJA
+    else if ((50 <= power && power < 60) || (70 <= power && power < 75)) 
     {
-        for (int j = 0; j < num_pieces; j++)
+        bool closest_enemy = true;
+        // Determinamos si la pieza más cercana es aliada
+        for (int i = 0; i < colors.size(); i++)
         {
-            if (state.distanceToGoal(colors[i], j) > 0)
+            for (int j = 0; j < num_pieces; j++)
             {
-                pair<color, int> closest = getClosestPieceToPlayer(state, colors[i], j);
-                if (closest.first == colors[(i+1) % colors.size()])
+                if (state.distanceToGoal(colors[i], j) > 0)
                 {
-                    closest_enemy = false;
+                    pair<color, int> closest = getClosestPieceToPlayer(state, colors[i], j);
+                    if (closest.first == colors[(i+1) % colors.size()])
+                    {
+                        closest_enemy = false;
+                    }
                 }
             }
         }
+        return closest_enemy ? 25 : 5;
     }
-
-    int power = state.getPower(player);
-    // MOVIMIENTO RÁPIDO
-    if (0 <= power && power < 50) return 100;
-    // CONCHA ROJA
-    else if (50 <= power && power < 60) return closest_enemy ? 25 : -10;
     // BOOM
-    else if (60 <= power && power < 65) return have_dices ? 10 : -25;
+    else if (60 <= power && power < 65) return have_other_available_dices ? 10 : -25;
     // MOVIMIENTO ULTRARÁPIDO
-    else if (65 <= power && power < 70) return 200;
-    // CONCHA ROJA
-    else if (70 <= power && power < 75) return closest_enemy ? 25 : -10;
+    else if (65 <= power && power < 70) return 100;
     // MOVIMIENTO BALA
-    else if (75 <= power && power < 80) return 300;
+    else if (75 <= power && power < 80) return 200;
     // CATAPUM
-    else if (80 <= power && power < 85) return have_dices ? 20 : -50;
+    else if (80 <= power && power < 85) return have_other_available_dices ? 20 : -50;
     // CONCHA AZUL
-    else if (85 <= power && power < 90) return closest_enemy_goal ? 50 : -25;
+    else if (85 <= power && power < 90) 
+    {
+        bool closest_enemy_goal = true;
+        // Determinamos si la pieza más cercana a la meta es de un color aliado
+        for (int i = 0; i < colors.size(); i++)
+        {
+            pair<color, int> closest_to_goal = getClosestPieceToGoal(state, colors[i]);
+            if (closest_to_goal.first == colors[(i+1) % colors.size()])
+            {
+                closest_enemy_goal = false;
+            }
+        }
+        return closest_enemy_goal ? 50 : 5;
+    }
     // BOOMBOOM
-    else if (90 <= power && power < 95) return have_dices ? 30 : -100;
+    else if (90 <= power && power < 95) return have_other_available_dices ? 30 : -100;
     // MOVIMIENTO ESTRELLA
-    else if (95 <= power && power < 100) return 400;
+    else if (95 <= power && power < 100) return 300;
     // CATAPUMCHIMPUM
-    else return -200;
+    else return -100;
 }
 
 double AIPlayer::setScore(const Parchis & state, int player)
@@ -487,11 +489,9 @@ double AIPlayer::setScore(const Parchis & state, int player)
 
     int score = 0;
     
-    // Recorro colores del jugador.
-    for (int i = 0; i < colors.size(); i++)
+    // Recorro las fichas del jugador
+    for (color c : colors)
     {
-        color c = colors[i];
-        // Recorro las fichas de ese color.
         for (int j = 0; j < num_pieces; j++)
         {
             // Valoramos positivamente que la ficha esté en casilla segura o casi meta.
@@ -501,23 +501,23 @@ double AIPlayer::setScore(const Parchis & state, int player)
             }
             else if (state.getBoard().getPiece(c, j).get_box().type == final_queue)
             {
-                score += 50;
+                score += 25;
             }
             // Valoramos positivamente que la ficha esté cerca de la meta
-            score += 100 - state.distanceToGoal(c, j);
+            score += 200 - state.distanceToGoal(c, j);
         }
 
         // Valoramos positivamente que tengamos fichas en meta
         score += state.piecesAtGoal(c)*50;
 
         // Valoramos negativamente que tengamos fichas en casa
-        score -= state.piecesAtHome(c)*25;
+        score -= state.piecesAtHome(c)*15;
 
         // Valoramos negativamente que rebote mucho en la meta
         int bounces = state.getBounces(c);
         if (5 <= bounces && bounces < 10)
         {
-            score -= 15;
+            score -= 10;
         }
         else if (10 <= bounces && bounces < 20)
         {
@@ -546,25 +546,33 @@ double AIPlayer::setScore(const Parchis & state, int player)
         // Valoramos negativamente si ha comido una ficha suya
         else if (eaten.first == colors[0] || eaten.first == colors[1])
         {
-            score -= 25;
+            score -= 50;
         }
 
         int dice = state.getLastDice();
+        if (dice == 6 && state.piecesAtHome(get<0>(last_action)) == 0)
+        {
+            score += 15;
+        }
     }
 
-    score += setPowerBarScore(state, player);
+    //score += setPowerBarScore(state, player);
 
     // Bonificaciones si se han destruido fichas rivales en el último turno
     vector<pair<color, int>> destroyed = state.piecesDestroyedLastMove();
     for (auto d : destroyed)
     {
-        if (d.first == colors[0] || d.first == colors[1])
+        if (d.first == none)
         {
-            score -= 50;
+            score += 0;
         }
-        else
+        else if (d.first != colors[0] && d.first != colors[1])
         {
             score += 50;
+        }
+        else if (d.first == colors[0] || d.first == colors[1])
+        {
+            score -= 50;
         }
     }
 
