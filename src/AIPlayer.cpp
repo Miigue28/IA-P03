@@ -429,7 +429,7 @@ double AIPlayer::setPowerBarScore(const Parchis & state, int player)
     
     int power = state.getPower(player);
     // MOVIMIENTO RÁPIDO
-    if (0 <= power && power < 50) return (power/7)*10;
+    if (0 <= power && power < 50) return (power/7)*5;
     // CONCHA ROJA
     else if ((50 <= power && power < 60) || (70 <= power && power < 75)) 
     {
@@ -452,13 +452,13 @@ double AIPlayer::setPowerBarScore(const Parchis & state, int player)
         return closest_enemy ? 25 : 5;
     }
     // BOOM
-    else if (60 <= power && power < 65) return have_other_available_dices ? 10 : -25;
+    else if (60 <= power && power < 65) return have_other_available_dices ? 10 : -15;
     // MOVIMIENTO ULTRARÁPIDO
-    else if (65 <= power && power < 70) return 100;
+    else if (65 <= power && power < 70) return 35;
     // MOVIMIENTO BALA
-    else if (75 <= power && power < 80) return 200;
+    else if (75 <= power && power < 80) return 50;
     // CATAPUM
-    else if (80 <= power && power < 85) return have_other_available_dices ? 20 : -50;
+    else if (80 <= power && power < 85) return have_other_available_dices ? 15 : -25;
     // CONCHA AZUL
     else if (85 <= power && power < 90) 
     {
@@ -472,14 +472,56 @@ double AIPlayer::setPowerBarScore(const Parchis & state, int player)
                 closest_enemy_goal = false;
             }
         }
-        return closest_enemy_goal ? 50 : 5;
+        return closest_enemy_goal ? 50 : 15;
     }
     // BOOMBOOM
-    else if (90 <= power && power < 95) return have_other_available_dices ? 30 : -100;
+    else if (90 <= power && power < 95) return have_other_available_dices ? 15 : -50;
     // MOVIMIENTO ESTRELLA
-    else if (95 <= power && power < 100) return 300;
+    else if (95 <= power && power < 100) return 75;
     // CATAPUMCHIMPUM
-    else return -100;
+    else return -75;
+}
+
+double AIPlayer::setColorScore(const Parchis & state, color player)
+{
+    int score = 0;
+
+    for (int j = 0; j < num_pieces; j++)
+    {
+        // Valoramos positivamente que la ficha esté en casilla segura o casi meta.
+        if (state.isSafePiece(player, j))
+        {
+            score += 10;
+        }
+        else if (state.getBoard().getPiece(player, j).get_box().type == final_queue)
+        {
+            score += 25;
+        }
+        // Valoramos positivamente que la ficha esté cerca de la meta
+        score += 200 - state.distanceToGoal(player, j);
+    }
+
+    // Valoramos positivamente que tengamos fichas en meta
+    score += state.piecesAtGoal(player)*50;
+
+    // Valoramos negativamente que tengamos fichas en casa
+    score -= state.piecesAtHome(player)*15;
+
+    // Valoramos negativamente que rebote mucho en la meta
+    int bounces = state.getBounces(player);
+    if (5 <= bounces && bounces < 10)
+    {
+        score -= 10;
+    }
+    else if (10 <= bounces && bounces < 20)
+    {
+        score -= 25;
+    }
+    else if (20 <= bounces && bounces < 30)
+    {
+        score -= 50;
+    }
+    return (double) score;
 }
 
 double AIPlayer::setScore(const Parchis & state, int player)
@@ -489,44 +531,21 @@ double AIPlayer::setScore(const Parchis & state, int player)
 
     int score = 0;
     
-    // Recorro las fichas del jugador
-    for (color c : colors)
+    // Bonificaciones en función del color
+    vector<int> colors_score(colors.size(), 0);
+
+    for (int i = 0; i < colors.size(); i++)
     {
-        for (int j = 0; j < num_pieces; j++)
-        {
-            // Valoramos positivamente que la ficha esté en casilla segura o casi meta.
-            if (state.isSafePiece(c, j))
-            {
-                score += 10;
-            }
-            else if (state.getBoard().getPiece(c, j).get_box().type == final_queue)
-            {
-                score += 25;
-            }
-            // Valoramos positivamente que la ficha esté cerca de la meta
-            score += 200 - state.distanceToGoal(c, j);
-        }
-
-        // Valoramos positivamente que tengamos fichas en meta
-        score += state.piecesAtGoal(c)*50;
-
-        // Valoramos negativamente que tengamos fichas en casa
-        score -= state.piecesAtHome(c)*15;
-
-        // Valoramos negativamente que rebote mucho en la meta
-        int bounces = state.getBounces(c);
-        if (5 <= bounces && bounces < 10)
-        {
-            score -= 10;
-        }
-        else if (10 <= bounces && bounces < 20)
-        {
-            score -= 25;
-        }
-        else if (20 <= bounces && bounces < 30)
-        {
-            score -= 50;
-        }
+        colors_score[i] = setColorScore(state, colors[i]);
+    }
+    
+    if (colors_score[0] < colors_score[1])
+    {
+        score += 0.8*colors_score[0] + 1.2*colors_score[1];
+    }
+    else
+    {
+        score += 1.2*colors_score[0] + 0.8*colors_score[1];
     }
 
     // Bonificaciones si hemos realizado la última acción

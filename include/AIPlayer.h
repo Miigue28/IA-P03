@@ -96,6 +96,8 @@ public:
 
     static double setScore(const Parchis &estado, int jugador);
 
+    static double setColorScore(const Parchis &estado, color jugador);
+
     static double setPowerBarScore(const Parchis & state, int player);
 
     virtual double alphaBetaPrunning(const Parchis &state, int player, int depth, const int max_depth, color &c_piece, int &id_piece, int &dice, double alpha, double beta, double (*heuristic)(const Parchis &, int)) const;
