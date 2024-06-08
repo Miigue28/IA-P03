@@ -429,7 +429,7 @@ double AIPlayer::setPowerBarScore(const Parchis & state, int player)
     
     int power = state.getPower(player);
     // MOVIMIENTO RÁPIDO
-    if (0 <= power && power < 50) return (power/7)*10;
+    if (0 <= power && power < 50) return (power/7)*5;
     // CONCHA ROJA
     else if ((50 <= power && power < 60) || (70 <= power && power < 75)) 
     {
@@ -449,16 +449,16 @@ double AIPlayer::setPowerBarScore(const Parchis & state, int player)
                 }
             }
         }
-        return closest_enemy ? 25 : 5;
+        return closest_enemy ? 45 : 20;
     }
     // BOOM
-    else if (60 <= power && power < 65) return have_other_available_dices ? 5 : -15;
+    else if (60 <= power && power < 65) return have_other_available_dices ? 25 : -15;
     // MOVIMIENTO ULTRARÁPIDO
     else if (65 <= power && power < 70) return 35;
     // MOVIMIENTO BALA
     else if (75 <= power && power < 80) return 50;
     // CATAPUM
-    else if (80 <= power && power < 85) return have_other_available_dices ? 5 : -25;
+    else if (80 <= power && power < 85) return have_other_available_dices ? 55 : -25;
     // CONCHA AZUL
     else if (85 <= power && power < 90) 
     {
@@ -472,10 +472,10 @@ double AIPlayer::setPowerBarScore(const Parchis & state, int player)
                 closest_enemy_goal = false;
             }
         }
-        return closest_enemy_goal ? 50 : 15;
+        return closest_enemy_goal ? 75 : 60;
     }
     // BOOMBOOM
-    else if (90 <= power && power < 95) return have_other_available_dices ? 5 : -50;
+    else if (90 <= power && power < 95) return have_other_available_dices ? 65 : -50;
     // MOVIMIENTO ESTRELLA
     else if (95 <= power && power < 100) return 75;
     // CATAPUMCHIMPUM
@@ -575,7 +575,7 @@ double AIPlayer::setScore(const Parchis & state, int player)
         }
     }
 
-    //score += setPowerBarScore(state, player);
+    score += setPowerBarScore(state, player);
 
     // Bonificaciones si se han destruido fichas rivales en el último turno
     vector<pair<color, int>> destroyed = state.piecesDestroyedLastMove();
