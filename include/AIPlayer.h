@@ -88,7 +88,7 @@ public:
      * @param jugador Id del jugador actual (0 o 1)
      * @return double
      */
-    static double Heuristica(const Parchis &estado, int jugador);
+    static double Heuristic(const Parchis &estado, int jugador);
 
     static pair<color, int> getClosestPieceToGoal(const Parchis & state, color player);
 

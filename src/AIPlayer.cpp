@@ -39,7 +39,7 @@ void AIPlayer::think(color & c_piece, int & id_piece, int & dice) const{
             valor = alphaBetaPrunning(*actual, jugador, 0, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, ValoracionTest);
         break;
         case 1:
-            valor = alphaBetaPrunning(*actual, jugador, 0, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, Heuristica);
+            valor = alphaBetaPrunning(*actual, jugador, 0, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, Heuristic);
         break;
     }
     cout << "Valor MiniMax: " << valor << "  Accion: " << str(c_piece) << " " << id_piece << " " << dice << endl;
@@ -539,6 +539,7 @@ double AIPlayer::setScore(const Parchis & state, int player)
         colors_score[i] = setColorScore(state, colors[i]);
     }
     
+    // Bonificaciones en función del color más prometedor
     if (colors_score[0] < colors_score[1])
     {
         score += 0.8*colors_score[0] + 1.5*colors_score[1];
@@ -569,6 +570,7 @@ double AIPlayer::setScore(const Parchis & state, int player)
         }
 
         int dice = state.getLastDice();
+        // Cada vez que saque un 6 y no tenga fichas en casa se moverá 7 casillas
         if (dice == 6 && state.piecesAtHome(get<0>(last_action)) == 0)
         {
             score += 15;
@@ -598,9 +600,8 @@ double AIPlayer::setScore(const Parchis & state, int player)
     return (double) score;
 }
 
-double AIPlayer::Heuristica(const Parchis & state, int player)
+double AIPlayer::Heuristic(const Parchis & state, int player)
 {
-    // Heurística de prueba proporcionada para validar el funcionamiento del algoritmo de búsqueda.
     int winner = state.getWinner();
     int adversary = (player+1) % 2;
 
